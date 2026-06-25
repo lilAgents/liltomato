@@ -1,0 +1,5 @@
+# Allow the build scripts these dependencies need (native binaries).
+# pnpm blocks dependency build scripts by default since v10.
+allowBuilds:
+  esbuild: true
+  sharp: true

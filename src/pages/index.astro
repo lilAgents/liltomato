@@ -1,0 +1,337 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="lilTomato - Free Pomodoro Timer | lilAgents"
+  description="A clean, distraction-free Pomodoro timer with tasks, breaks, ambient sound, stats, and fullscreen focus mode. Free, private, and runs entirely in your browser. A free tool by lilAgents."
+>
+  <section class="pt-12 pb-16 lg:pt-16 bg-white dark:bg-dark">
+    <div class="container">
+      <div id="tomato-tool" class="mx-auto max-w-3xl">
+
+        <header class="text-center mb-8">
+          <h1 class="text-3xl sm:text-4xl font-bold text-dark dark:text-white mb-2">
+            <span class="text-primary">lil</span>Tomato
+          </h1>
+          <p class="text-body-color dark:text-dark-6">A clean, distraction-free Pomodoro timer for focused work in intervals</p>
+        </header>
+
+        <div id="tomato-app"></div>
+
+      </div>
+    </div>
+  </section>
+
+  <style is:global>
+    /* lilTomato — scoped under #tomato-tool. Chrome tokens map onto the site
+       palette and follow the site's .dark class (no in-tool theme toggle). */
+    #tomato-tool {
+      --tmto-page: #f9fafb;
+      --tmto-elevated: #ffffff;
+      --tmto-muted: #f3f4f6;
+      --tmto-text: #232323;
+      --tmto-text-2: #637381;
+      --tmto-text-3: #8890a4;
+      --tmto-border: #e5e7eb;
+      --tmto-accent: var(--color-primary);
+      --tmto-accent-hover: var(--color-primary-dark);
+      --tmto-accent-soft: rgba(83, 110, 229, 0.12);
+      --tmto-ring: rgba(83, 110, 229, 0.4);
+      --tmto-danger: #d64937;
+      --tmto-radius: 1.5rem;
+      --tmto-fs-bg: #ffffff;
+    }
+    .dark #tomato-tool {
+      --tmto-page: #232323;
+      --tmto-elevated: #373737;
+      --tmto-muted: #232323;
+      --tmto-text: #ffffff;
+      --tmto-text-2: #d1d5db;
+      --tmto-text-3: #9ca3af;
+      --tmto-border: #374151;
+      --tmto-accent-soft: rgba(83, 110, 229, 0.24);
+      --tmto-ring: rgba(83, 110, 229, 0.55);
+      --tmto-danger: #f87171;
+      --tmto-fs-bg: #232323;
+    }
+
+    /* ---- shell -------------------------------------------------------- */
+    #tomato-tool .tmto-app { display: flex; flex-direction: column; }
+    #tomato-tool .tmto-bar {
+      display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #tomato-tool .tmto-brand {
+      display: none; align-items: center; gap: 0.6rem; margin-right: auto;
+      color: var(--tmto-text); text-decoration: none; font-weight: 600; font-size: 1.05rem;
+    }
+    #tomato-tool .tmto-brand img { width: 32px; height: 32px; display: block; }
+    #tomato-tool .tmto-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    #tomato-tool .tmto-main {
+      width: 100%; max-width: 36rem; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 1.5rem;
+    }
+    #tomato-tool .tmto-foot {
+      display: none; text-align: center; padding: 1rem; font-size: 0.875rem; color: var(--tmto-text-3);
+      transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #tomato-tool .tmto-foot a {
+      color: var(--tmto-text-2); text-decoration: underline; text-decoration-color: transparent;
+      text-underline-offset: 2px; transition: color 0.2s, text-decoration-color 0.2s;
+    }
+    #tomato-tool .tmto-foot a:hover { color: var(--tmto-accent); text-decoration-color: var(--tmto-accent); }
+
+    /* ---- pills (action buttons) -------------------------------------- */
+    #tomato-tool .tmto-pill {
+      border: 1px solid var(--tmto-border); background: var(--tmto-elevated); color: var(--tmto-text-2);
+      cursor: pointer; border-radius: 9999px; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); transition: border-color 0.2s, color 0.2s;
+    }
+    #tomato-tool .tmto-pill:hover { border-color: var(--tmto-accent); color: var(--tmto-text); }
+    #tomato-tool .tmto-pill--file { display: inline-flex; align-items: center; }
+    #tomato-tool .tmto-pill--test { align-self: flex-start; }
+
+    /* ---- cards -------------------------------------------------------- */
+    #tomato-tool .tmto-card {
+      background: var(--tmto-elevated); border: 1px solid var(--tmto-border);
+      border-radius: var(--tmto-radius); box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+    .dark #tomato-tool .tmto-card { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+    #tomato-tool .tmto-timer { padding: 1.5rem; }
+    @media (min-width: 540px) { #tomato-tool .tmto-timer { padding: 2.5rem; } }
+
+    /* ---- collapse animation ------------------------------------------ */
+    #tomato-tool .tmto-collapse {
+      display: grid; grid-template-rows: 1fr;
+      transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #tomato-tool .tmto-collapse > div { min-height: 0; overflow: hidden; }
+    #tomato-tool .tmto-collapse.is-closed { grid-template-rows: 0fr; }
+    #tomato-tool .tmto-app.is-chrome-hidden .tmto-hintwrap,
+    #tomato-tool .tmto-app.is-chrome-hidden .tmto-taskswrap { grid-template-rows: 0fr; }
+
+    /* ---- modes -------------------------------------------------------- */
+    #tomato-tool .tmto-modes { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+    #tomato-tool .tmto-mode {
+      border: none; cursor: pointer; border-radius: 9999px; padding: 0.5rem 1rem;
+      font-size: 0.875rem; font-weight: 500; color: var(--tmto-text-3); background: transparent;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+    #tomato-tool .tmto-mode:hover:not(:disabled) { background: var(--tmto-muted); color: var(--tmto-text); }
+    #tomato-tool .tmto-mode.is-active {
+      background: var(--tmto-accent-soft); color: var(--tmto-accent);
+      box-shadow: inset 0 0 0 2px var(--tmto-ring);
+    }
+    #tomato-tool .tmto-mode:disabled { cursor: not-allowed; opacity: 0.6; }
+
+    /* ---- cycle indicator + time -------------------------------------- */
+    #tomato-tool .tmto-cycle {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem;
+      margin: 0.75rem 0 0; font-size: 0.75rem; color: var(--tmto-text-3);
+    }
+    #tomato-tool .tmto-dots { display: inline-flex; gap: 0.375rem; }
+    #tomato-tool .tmto-dot { display: inline-block; height: 0.5rem; width: 0.5rem; border-radius: 9999px; background: var(--tmto-border); }
+    #tomato-tool .tmto-dot.is-on { background: var(--tmto-accent); }
+    #tomato-tool .tmto-time {
+      margin: 1.75rem 0 0; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em; line-height: 1; color: var(--tmto-text); font-size: clamp(3.5rem, 12vw, 5.5rem);
+    }
+    #tomato-tool .tmto-controls {
+      margin-top: 1.75rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.75rem;
+    }
+    #tomato-tool .tmto-primary {
+      min-width: 140px; border: none; cursor: pointer; border-radius: 9999px; background: var(--tmto-accent);
+      color: #fff; font-weight: 600; font-size: 1rem; padding: 0.75rem 2rem;
+      box-shadow: 0 6px 16px rgba(83, 110, 229, 0.3); transition: background 0.2s;
+    }
+    #tomato-tool .tmto-primary:hover { background: var(--tmto-accent-hover); }
+    #tomato-tool .tmto-primary--sm { min-width: 0; padding: 0.5rem 1.25rem; font-size: 0.875rem; box-shadow: none; }
+    #tomato-tool .tmto-ghost {
+      border: 1px solid var(--tmto-border); cursor: pointer; border-radius: 9999px; background: var(--tmto-muted);
+      color: var(--tmto-text-2); font-weight: 500; font-size: 0.875rem; padding: 0.75rem 1.25rem; transition: border-color 0.2s;
+    }
+    #tomato-tool .tmto-ghost:hover { border-color: var(--tmto-accent); }
+    #tomato-tool .tmto-hint { margin: 1.5rem 0 0; text-align: center; font-size: 0.875rem; color: var(--tmto-text-3); }
+
+    /* ---- tasks -------------------------------------------------------- */
+    #tomato-tool .tmto-tasks { padding: 1.25rem; }
+    @media (min-width: 540px) { #tomato-tool .tmto-tasks { padding: 2rem; } }
+    #tomato-tool .tmto-tasks__title { font-size: 1.125rem; font-weight: 600; color: var(--tmto-text); margin: 0 0 1rem; }
+    #tomato-tool .tmto-tasklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+    #tomato-tool .tmto-task {
+      display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.5rem;
+      border: 1px solid transparent; border-radius: 0.75rem; transition: background 0.15s, border-color 0.15s;
+    }
+    #tomato-tool .tmto-task:hover { border-color: var(--tmto-border); background: var(--tmto-muted); }
+    #tomato-tool .tmto-task.is-active { border-color: var(--tmto-accent); background: var(--tmto-accent-soft); }
+    #tomato-tool .tmto-task--empty { color: var(--tmto-text-3); font-size: 0.875rem; justify-content: center; padding: 0.75rem; }
+    #tomato-tool .tmto-task--empty:hover { border-color: transparent; background: transparent; }
+    #tomato-tool .tmto-task__check { margin-top: 0.25rem; width: 1rem; height: 1rem; accent-color: var(--tmto-accent); flex-shrink: 0; }
+    #tomato-tool .tmto-task__main { min-width: 0; flex: 1; }
+    #tomato-tool .tmto-task__title {
+      border: none; background: none; cursor: pointer; text-align: left; font-size: 0.875rem;
+      font-weight: 500; color: var(--tmto-text); padding: 0.15rem 0; word-break: break-word;
+    }
+    #tomato-tool .tmto-task__title.is-done { color: var(--tmto-text-3); text-decoration: line-through; }
+    #tomato-tool .tmto-task__edit {
+      width: 100%; border: 1px solid var(--tmto-border); background: var(--tmto-elevated); color: var(--tmto-text);
+      border-radius: 0.5rem; padding: 0.25rem 0.5rem; font: inherit; font-size: 0.875rem;
+    }
+    #tomato-tool .tmto-task__edit:focus { outline: none; border-color: var(--tmto-accent); box-shadow: 0 0 0 3px var(--tmto-ring); }
+    #tomato-tool .tmto-task__actions { display: flex; flex-shrink: 0; gap: 0.25rem; align-items: center; }
+    #tomato-tool .tmto-task__focus {
+      border: none; background: none; cursor: pointer; border-radius: 0.5rem; padding: 0.25rem 0.5rem;
+      font-size: 0.75rem; font-weight: 500; color: var(--tmto-accent);
+    }
+    #tomato-tool .tmto-task__focus:hover { background: var(--tmto-accent-soft); }
+    #tomato-tool .tmto-task__move { border: none; background: none; cursor: pointer; color: var(--tmto-text-3); padding: 0 0.25rem; font-size: 0.875rem; }
+    #tomato-tool .tmto-task__move:disabled { opacity: 0.3; cursor: default; }
+    #tomato-tool .tmto-task__del { border: none; background: none; cursor: pointer; color: var(--tmto-danger); font-size: 0.75rem; padding: 0 0.25rem; }
+    #tomato-tool .tmto-task__del:hover { text-decoration: underline; }
+    #tomato-tool .tmto-add { margin-top: 1rem; display: flex; gap: 0.5rem; }
+    #tomato-tool .tmto-input {
+      min-width: 0; flex: 1; border: 1px solid var(--tmto-border); background: var(--tmto-page); color: var(--tmto-text);
+      border-radius: 0.75rem; padding: 0.5rem 0.75rem; font: inherit; font-size: 0.875rem;
+    }
+    #tomato-tool .tmto-input:focus { outline: none; border-color: var(--tmto-accent); box-shadow: 0 0 0 3px var(--tmto-ring); }
+    #tomato-tool .tmto-input::placeholder { color: var(--tmto-text-3); }
+    #tomato-tool .tmto-add__btn {
+      border: none; cursor: pointer; border-radius: 0.75rem; background: var(--tmto-accent); color: #fff;
+      font-weight: 600; font-size: 0.875rem; padding: 0.5rem 1rem;
+    }
+    #tomato-tool .tmto-add__btn:hover { background: var(--tmto-accent-hover); }
+    #tomato-tool .tmto-tasknote { margin: 0.75rem 0 0; font-size: 0.75rem; color: var(--tmto-text-3); }
+
+    /* ---- modal (settings + report) ----------------------------------- */
+    #tomato-tool .tmto-modal {
+      position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+      padding: 1rem; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px);
+    }
+    #tomato-tool .tmto-modal__card {
+      display: flex; flex-direction: column; width: 100%; max-width: 32rem; max-height: min(88vh, 680px);
+      overflow: hidden; background: var(--tmto-elevated); border: 1px solid var(--tmto-border);
+      border-radius: var(--tmto-radius); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    }
+    #tomato-tool .tmto-modal__card--wide { max-width: 48rem; }
+    #tomato-tool .tmto-modal__head {
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--tmto-border);
+    }
+    #tomato-tool .tmto-modal__head h2 { font-size: 1.125rem; font-weight: 600; color: var(--tmto-text); margin: 0; }
+    #tomato-tool .tmto-x { border: none; background: none; cursor: pointer; color: var(--tmto-text-3); font-size: 0.875rem; padding: 0.25rem 0.75rem; border-radius: 9999px; }
+    #tomato-tool .tmto-x:hover { background: var(--tmto-muted); }
+    #tomato-tool .tmto-modal__body { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+    @media (min-width: 720px) { #tomato-tool .tmto-modal__body { flex-direction: row; overflow: hidden; } }
+    #tomato-tool .tmto-modal__body--pad { padding: 1.5rem; overflow-y: auto; }
+    #tomato-tool .tmto-tabs { display: flex; gap: 0.25rem; overflow-x: auto; padding: 0.5rem; border-bottom: 1px solid var(--tmto-border); flex-shrink: 0; }
+    @media (min-width: 720px) {
+      #tomato-tool .tmto-tabs { flex-direction: column; width: 11rem; border-bottom: none; border-right: 1px solid var(--tmto-border); overflow-y: auto; }
+    }
+    #tomato-tool .tmto-tab {
+      flex-shrink: 0; text-align: left; padding: 0.5rem 0.75rem; border: none; background: none; cursor: pointer;
+      border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; color: var(--tmto-text-2); white-space: nowrap;
+    }
+    #tomato-tool .tmto-tab:hover { background: var(--tmto-muted); }
+    #tomato-tool .tmto-tab.is-active { background: var(--tmto-accent-soft); color: var(--tmto-accent); }
+    #tomato-tool .tmto-panel { min-height: 0; min-width: 0; flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    #tomato-tool .tmto-modal__foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 1rem 1.25rem; border-top: 1px solid var(--tmto-border); flex-shrink: 0; }
+
+    /* ---- fields / toggles -------------------------------------------- */
+    #tomato-tool .tmto-field { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.875rem; }
+    #tomato-tool .tmto-field > span { font-weight: 500; color: var(--tmto-text-2); }
+    #tomato-tool .tmto-field input[type="number"],
+    #tomato-tool .tmto-field input[type="url"],
+    #tomato-tool .tmto-field input[type="text"],
+    #tomato-tool .tmto-field select {
+      border: 1px solid var(--tmto-border); background: var(--tmto-page); color: var(--tmto-text);
+      border-radius: 0.5rem; padding: 0.5rem 0.75rem; font: inherit;
+    }
+    #tomato-tool .tmto-field input:focus, #tomato-tool .tmto-field select:focus {
+      outline: none; border-color: var(--tmto-accent); box-shadow: 0 0 0 3px var(--tmto-ring);
+    }
+    #tomato-tool .tmto-field input[type="number"] { max-width: 10rem; }
+    #tomato-tool .tmto-grid3 { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+    @media (min-width: 540px) { #tomato-tool .tmto-grid3 { grid-template-columns: repeat(3, 1fr); } }
+    #tomato-tool .tmto-grid3 .tmto-field input[type="number"] { max-width: none; }
+    #tomato-tool .tmto-field input[type="range"] { width: 100%; accent-color: var(--tmto-accent); }
+    #tomato-tool .tmto-rangeval { font-style: normal; color: var(--tmto-text-3); font-weight: 600; }
+    #tomato-tool .tmto-hr { border: none; border-top: 1px solid var(--tmto-border); margin: 0; }
+    #tomato-tool .tmto-note { font-size: 0.8125rem; color: var(--tmto-text-3); line-height: 1.5; margin: 0; }
+    #tomato-tool .tmto-togglewrap { display: flex; flex-direction: column; gap: 0.35rem; }
+    #tomato-tool .tmto-toggle {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; text-align: left;
+      padding: 0.75rem 1rem; border: 1px solid var(--tmto-border); border-radius: 0.75rem; background: none; cursor: pointer;
+    }
+    #tomato-tool .tmto-toggle:hover { background: var(--tmto-muted); }
+    #tomato-tool .tmto-toggle__label { font-size: 0.875rem; font-weight: 500; color: var(--tmto-text); }
+    #tomato-tool .tmto-switch {
+      position: relative; display: inline-flex; height: 1.75rem; width: 3rem; flex-shrink: 0;
+      border-radius: 9999px; background: var(--tmto-border); transition: background 0.2s;
+    }
+    #tomato-tool .tmto-toggle.is-on .tmto-switch { background: var(--tmto-accent); }
+    #tomato-tool .tmto-switch__knob {
+      position: absolute; top: 0.25rem; left: 0.25rem; height: 1.25rem; width: 1.25rem; border-radius: 9999px;
+      background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); transition: left 0.2s;
+    }
+    #tomato-tool .tmto-toggle.is-on .tmto-switch__knob { left: 1.5rem; }
+    #tomato-tool .tmto-hint--field { margin: 0; }
+    #tomato-tool .tmto-datarow { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+
+    /* ---- report stats ------------------------------------------------- */
+    #tomato-tool .tmto-stats { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+    @media (min-width: 540px) { #tomato-tool .tmto-stats { grid-template-columns: 1fr 1fr; } }
+    #tomato-tool .tmto-stat { border: 1px solid var(--tmto-border); background: var(--tmto-muted); border-radius: 0.75rem; padding: 1rem; }
+    #tomato-tool .tmto-stat__label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--tmto-text-3); }
+    #tomato-tool .tmto-stat__big { margin-top: 0.5rem; font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--tmto-text); }
+    #tomato-tool .tmto-stat__big span { font-size: 1rem; font-weight: 400; color: var(--tmto-text-2); }
+    #tomato-tool .tmto-stat__sub { margin-top: 0.25rem; font-size: 0.875rem; color: var(--tmto-text-2); }
+
+    /* ---- toast -------------------------------------------------------- */
+    #tomato-tool .tmto-toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 60; max-width: 90vw;
+      display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.1rem; border: 1px solid var(--tmto-border);
+      background: var(--tmto-elevated); color: var(--tmto-text); border-radius: 9999px; font-size: 0.875rem;
+      font-weight: 500; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+    }
+    #tomato-tool .tmto-toast[hidden] { display: none; }
+    #tomato-tool .tmto-toast__x { border: none; background: none; cursor: pointer; color: var(--tmto-text-3); font-size: 1rem; line-height: 1; }
+
+    /* ---- fullscreen / immersive -------------------------------------- */
+    #tomato-tool .tmto-app.is-fullscreen {
+      width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: center;
+      padding: 5.5rem 1rem 4rem; background: var(--tmto-fs-bg); overflow-y: auto;
+    }
+    #tomato-tool .tmto-app.is-fullscreen .tmto-bar {
+      position: fixed; top: 0; left: 0; right: 0; justify-content: space-between; align-items: center;
+      margin: 0; padding: 1rem 1.5rem; background: var(--tmto-fs-bg);
+    }
+    #tomato-tool .tmto-app.is-fullscreen .tmto-brand { display: inline-flex; }
+    #tomato-tool .tmto-app.is-fullscreen .tmto-foot {
+      display: block; position: fixed; bottom: 0; left: 0; right: 0; padding: 1rem 1.5rem; background: var(--tmto-fs-bg);
+    }
+    #tomato-tool .tmto-app.is-fullscreen .tmto-main { margin: auto; }
+    #tomato-tool .tmto-app.is-chrome-hidden .tmto-bar { opacity: 0; transform: translateY(-0.5rem); pointer-events: none; }
+    #tomato-tool .tmto-app.is-chrome-hidden .tmto-foot { opacity: 0; transform: translateY(0.5rem); pointer-events: none; }
+    #tomato-tool .tmto-app:fullscreen { background: var(--tmto-fs-bg); }
+    #tomato-tool .tmto-app:fullscreen::backdrop { background: var(--tmto-fs-bg); }
+
+    /* Distraction-free: when the timer enters fullscreen, the app toggles
+       .tomato-fullscreen on <html>. Hide the standalone Layout chrome (the
+       top <header> and bottom <footer> rendered by Layout.astro) so only the
+       timer remains. These are site-level selectors, intentionally not scoped
+       to #tomato-tool; body > header / body > footer target the Layout's own
+       header/footer, never the tool's internal .tmto-bar / .tmto-foot. */
+    html.tomato-fullscreen body > header,
+    html.tomato-fullscreen body > footer { display: none !important; }
+
+    @media (prefers-reduced-motion: reduce) {
+      #tomato-tool .tmto-collapse,
+      #tomato-tool .tmto-bar,
+      #tomato-tool .tmto-foot { transition: none; }
+    }
+  </style>
+
+  <script src="/tools/tomato/app.js" is:inline></script>
+</Layout>
