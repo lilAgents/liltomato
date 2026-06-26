@@ -1,4 +1,5 @@
 ---
+import ToolFooter from "../components/ToolFooter.astro";
 import '../styles/global.css';
 const { title = 'lilQR', description = '' } = Astro.props;
 ---
@@ -60,10 +61,7 @@ const { title = 'lilQR', description = '' } = Astro.props;
       <slot />
     </main>
 
-    <footer class="border-t border-gray-200 dark:border-dark-3 py-6 text-center text-sm text-body-color dark:text-dark-6">
-      Made with <span style="color:#e25555">&#9829;</span> by
-      <a href="https://lilagents.com" target="_blank" class="text-primary hover:underline">lilAgents</a>
-    </footer>
+    <ToolFooter repoUrl="https://github.com/lilAgents/liltomato" />
 
     <script is:inline>
       (function () {
